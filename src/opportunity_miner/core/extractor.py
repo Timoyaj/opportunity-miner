@@ -7,6 +7,8 @@ import re
 from typing import Literal
 from pydantic import BaseModel, Field
 
+from .scraper import clean_scraped_text, extract_verbatim_quotes
+
 logger = logging.getLogger(__name__)
 
 
@@ -83,7 +85,9 @@ class ProblemExtractor:
 
     def _extract_heuristic(self, title: str, body: str, source: str) -> ProblemExtractionResult:
         """Rule-based NLP heuristic extractor that extracts rubrics, quotes, and underlying problems."""
-        full_text = f"{title}\n{body}".strip()
+        clean_title = clean_scraped_text(title)
+        clean_body = clean_scraped_text(body)
+        full_text = f"{clean_title}\n{clean_body}".strip() if clean_body else clean_title
         lower_text = full_text.lower()
 
         # 1. Budget extraction
@@ -126,26 +130,20 @@ class ProblemExtractor:
             "paying for", "subscription", "our current tool", "too expensive for what it does", "switched from"
         ])
 
-        # Extract pain quotes
-        pain_quotes = []
-        sentences = re.split(r"[.!?\n]+", full_text)
-        for s in sentences:
-            s_clean = s.strip()
-            if len(s_clean) > 15:
-                s_low = s_clean.lower()
-                if any(k in s_low for k in ["tedious", "manual", "takes hours", "frustrating", "waste", "struggle", "error"]):
-                    pain_quotes.append(s_clean[:150])
-                if len(pain_quotes) >= 3:
-                    break
+        # 8. Extract verbatim pain quotes using scraper heuristics
+        pain_quotes = extract_verbatim_quotes(full_text, max_quotes=3)
+        if not pain_quotes and clean_title:
+            pain_quotes = [clean_title]
 
-        # Payment quotes
+        # 9. Extract verbatim payment quotes
         payment_quotes = []
+        sentences = re.split(r"(?<=[.!?\n])\s+", full_text)
         for s in sentences:
             s_clean = s.strip()
             if len(s_clean) > 10:
                 s_low = s_clean.lower()
-                if any(k in s_low for k in ["$", "pay", "budget", "hire", "cost", "subscription"]):
-                    payment_quotes.append(s_clean[:150])
+                if any(k in s_low for k in ["$", "pay", "budget", "hire", "cost", "subscription", "pricing", "rate"]):
+                    payment_quotes.append(s_clean[:180])
                 if len(payment_quotes) >= 2:
                     break
 

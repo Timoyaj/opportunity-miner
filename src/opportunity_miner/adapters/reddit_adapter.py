@@ -6,6 +6,7 @@ import xml.etree.ElementTree as ET
 import requests
 
 from .base import SourceAdapter, NormalizedSignal
+from ..core.scraper import clean_scraped_text
 
 logger = logging.getLogger(__name__)
 
@@ -131,11 +132,14 @@ class RedditAdapter(SourceAdapter):
                             if since and pub_date < since:
                                 continue
 
-                            title = entry.findtext("atom:title", default="", namespaces=ns)
-                            content = entry.findtext("atom:content", default="", namespaces=ns)
+                            title = clean_scraped_text(entry.findtext("atom:title", default="", namespaces=ns))
+                            raw_content = entry.findtext("atom:content", default="", namespaces=ns)
+                            clean_content = clean_scraped_text(raw_content)
                             link_elem = entry.find("atom:link", ns)
                             link = link_elem.attrib.get("href", "") if link_elem is not None else ""
                             author = entry.findtext("atom:author/atom:name", default="", namespaces=ns)
+
+                            body = f"{title}\n\n{clean_content}".strip() if clean_content else title
 
                             signal = NormalizedSignal(
                                 source="reddit",
@@ -143,7 +147,7 @@ class RedditAdapter(SourceAdapter):
                                 source_url=link,
                                 title=title,
                                 author=author,
-                                body=f"{title}\n\n{content}".strip(),
+                                body=body,
                                 published_at=pub_date,
                                 metadata={"subreddit": sub_name, "ingest_tier": "rss"}
                             )

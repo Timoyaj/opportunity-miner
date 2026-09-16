@@ -9,6 +9,7 @@ import pandas as pd
 from opportunity_miner.database.session import get_db, init_db
 from opportunity_miner.database.models import Opportunity, ProblemCluster, ExtractedProblem, RawSignal, UserFeedback
 from opportunity_miner.core.vector_store import VectorStore
+from opportunity_miner.core.scraper import clean_scraped_text, extract_verbatim_quotes
 from opportunity_miner.adapters import ADAPTERS_MAP, get_adapter
 
 st.set_page_config(
@@ -470,14 +471,32 @@ elif view == "🔬 Dossier Detail":
                             st.markdown(f"*Root Cause:* {prob.underlying_problem}")
                             st.markdown(f"*Current Workaround:* `{prob.current_workaround}`")
 
-                            quotes = prob.pain_evidence
-                            if quotes:
-                                st.markdown("**Verbatim Pain Quotes:**")
-                                for q in quotes:
+                            # Clean and display pain quotes
+                            pain_quotes = [clean_scraped_text(q) for q in (prob.pain_evidence or []) if clean_scraped_text(q)]
+                            if not pain_quotes and prob.signal and prob.signal.body:
+                                pain_quotes = extract_verbatim_quotes(prob.signal.body, max_quotes=2)
+
+                            if pain_quotes:
+                                st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+                                st.markdown("**🔥 Verbatim Pain Quotes:**")
+                                for q in pain_quotes:
                                     st.markdown(f'<div class="quote">"{q}"</div>', unsafe_allow_html=True)
 
+                            # Clean and display willingness to pay quotes
+                            wtp_quotes = [clean_scraped_text(q) for q in (prob.wtp_evidence or []) if clean_scraped_text(q)]
+                            if wtp_quotes:
+                                st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+                                st.markdown("**💰 Verbatim Commercial & Budget Quotes:**")
+                                for q in wtp_quotes:
+                                    st.markdown(f'<div class="quote" style="border-left-color:#16a34a; background-color:#f0fdf4; color:#14532d;">"{q}"</div>', unsafe_allow_html=True)
+
                             if prob.signal:
-                                st.markdown(f"🔗 **Original Source:** [{prob.signal.source} URL]({prob.signal.source_url}) (Author: `{prob.signal.author}`)")
+                                st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+                                st.markdown(f"🔗 **Original Source:** [{prob.signal.source.upper()} Post]({prob.signal.source_url}) · Author: `{prob.signal.author}`")
+                                with st.expander(f"📄 Full Clean Raw Post Excerpt ({prob.signal.id})"):
+                                    clean_body = clean_scraped_text(prob.signal.body)
+                                    st.markdown(clean_body)
+
                             st.markdown("---")
                     else:
                         st.info("No linked evidence records for this opportunity.")
