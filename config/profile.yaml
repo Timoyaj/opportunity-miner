@@ -1,0 +1,29 @@
+# Target User Skills & Capabilities Profile
+
+profile:
+  name: "Technical Data & Automation Founder"
+  primary_skills:
+    - "python"
+    - "pandas"
+    - "numpy"
+    - "sql"
+    - "statistics"
+    - "machine learning"
+    - "data analysis"
+    - "data visualization"
+    - "streamlit"
+    - "plotly"
+    - "api"
+    - "automation"
+    - "ai"
+    - "llm"
+    - "etl"
+    - "fastapi"
+
+  preferred_solution_types:
+    - "AUTOMATION_SERVICE"
+    - "DASHBOARD"
+    - "DATA_ANALYSIS"
+    - "AI_APPLICATION"
+    - "API"
+    - "MICRO_SAAS"

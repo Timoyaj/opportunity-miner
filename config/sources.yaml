@@ -1,0 +1,56 @@
+# OpportunityMiner Source Configuration
+
+sources:
+  hackernews:
+    enabled: true
+    adapter: "hackernews"
+    queries:
+      - "manual"
+      - "automate"
+      - "spreadsheet"
+      - "looking for tool"
+      - "tedious"
+    tags:
+      - "ask_hn"
+      - "show_hn"
+    limit_per_query: 30
+
+  reddit:
+    enabled: true
+    adapter: "reddit"
+    subreddits:
+      - "excel"
+      - "smallbusiness"
+      - "Entrepreneur"
+      - "startups"
+      - "SaaS"
+      - "dataanalysis"
+      - "datascience"
+      - "PowerBI"
+      - "SQL"
+      - "freelance"
+      - "BusinessIntelligence"
+      - "learnpython"
+    limit_per_subreddit: 25
+
+  upwork:
+    enabled: true
+    adapter: "upwork"
+    rss_queries:
+      - "python automation"
+      - "excel automation"
+      - "data cleaning"
+      - "dashboard reporting"
+    dropzone_path: "data/imports/upwork"
+
+  indiehackers:
+    enabled: true
+    adapter: "indiehackers"
+    feed_url: "https://www.indiehackers.com/feed"
+    limit: 30
+
+  producthunt:
+    enabled: true
+    adapter: "producthunt"
+    feed_url: "https://www.producthunt.com/feed"
+    limit: 25

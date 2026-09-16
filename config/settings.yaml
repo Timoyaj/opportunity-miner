@@ -1,0 +1,24 @@
+# OpportunityMiner General Settings
+
+database:
+  url: "sqlite:///data/opportunity_miner.db"
+  echo: false
+
+clustering:
+  centroid_match_threshold: 0.82
+  new_cluster_threshold: 0.80
+  min_cluster_size: 3
+  dedup_threshold: 0.92
+
+negative_filter:
+  similarity_threshold: 0.85
+  blacklist_path: "data/vectors/negative_blacklist.json"
+
+reports:
+  output_dir: "reports"
+  markdown: true
+  json: true
+
+logging:
+  level: "INFO"
+  log_file: "data/logs/opportunity_miner.log"

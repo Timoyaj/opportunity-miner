@@ -1,0 +1,1 @@
+"""OpportunityMiner test suite."""

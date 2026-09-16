@@ -1,0 +1,44 @@
+# Deterministic Scoring Engine Configuration
+
+scoring:
+  max_score: 100
+  thresholds:
+    high_priority: 75.0
+    medium_priority: 60.0
+    min_report_score: 50.0
+
+  weights:
+    pain_max: 25.0
+    frequency_max: 15.0
+    wtp_max: 20.0
+    market_recurrence_max: 15.0
+    technical_feasibility_max: 15.0
+    user_expertise_fit_max: 10.0
+
+  rubric:
+    pain:
+      blocking: 12.0
+      severe: 8.0
+      mild: 4.0
+      financial_loss_bonus: 8.0
+      hours_lost_high_bonus: 5.0 # >= 5 hours/week
+      hours_lost_low_bonus: 2.0  # > 0 hours/week
+
+    frequency:
+      continuous: 15.0
+      daily: 15.0
+      weekly: 12.0
+      monthly: 7.0
+      yearly: 2.0
+      unknown: 1.0
+
+    wtp:
+      explicit_budget_high: 12.0 # >= $100
+      actively_seeking: 8.0
+      paying_for_broken_tool: 8.0
+
+    recurrence:
+      mentions_10_plus: 15.0
+      mentions_5_plus: 11.0
+      mentions_2_plus: 7.0
+      single_mention: 3.0
