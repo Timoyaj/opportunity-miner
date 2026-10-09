@@ -1,6 +1,9 @@
-# OpportunityMiner Source Configuration
+# OpportunityMiner Source Configuration — 100% FREE & OPEN-SOURCE (no paid API keys)
+# All 9 adapters use public RSS/JSON endpoints or free PATs (GITHUB_TOKEN optional)
+# To disable a source, set enabled: false — pipeline skips it gracefully
 
 sources:
+  # ── Original 5 (kept) ──────────────────────────────────────────────────
   hackernews:
     enabled: true
     adapter: "hackernews"
@@ -53,4 +56,59 @@ sources:
     enabled: true
     adapter: "producthunt"
     feed_url: "https://www.producthunt.com/feed"
+    limit: 25
+
+  # ── NEW FREE OSS ADAPTERS (GitHub / Stack Overflow / DEV.to / App Store) ─
+  github:
+    enabled: true
+    adapter: "github"
+    # Search phrases — combined with +in:title,body and created:> filter
+    queries:
+      - "excel automation tedious"
+      - "manual spreadsheet pain"
+      - "copy paste reporting nightmare"
+      - "spreadsheet bottleneck"
+      - "automate data cleaning"
+    limit: 30
+    # Optional: export GITHUB_TOKEN for 5k req/h (free PAT), else 60/h (still fine)
+
+  stackoverflow:
+    enabled: true
+    adapter: "stackoverflow"
+    queries:
+      - "excel automation"
+      - "spreadsheet manual"
+      - "powerbi reporting tedious"
+      - "google sheets formula nightmare"
+      - "python data cleaning"
+    tags:
+      - "excel"
+      - "python"
+      - "powerbi"
+      - "google-sheets"
+      - "sql"
+    limit: 25
+
+  devto:
+    enabled: true
+    adapter: "devto"
+    queries:
+      - "automation"
+      - "excel"
+      - "workflow"
+      - "productivity"
+      - "data"
+    limit: 25
+
+  appstore:
+    enabled: true
+    adapter: "appstore"
+    # Apple App Store IDs (country defaults to us)
+    apps:
+      - { id: "586683407", name: "Microsoft Excel", country: "us" }
+      - { id: "462058009", name: "Microsoft Power BI", country: "us" }
+      - { id: "879299342", name: "Trello", country: "us" }
+      - { id: "1342769574", name: "Notion", country: "us" }
+    # Optional Android packages (requires `pip install google-play-scraper` which is MIT)
+    # google_packages: ["com.microsoft.office.excel", "com.microsoft.powerbi"]
     limit: 25

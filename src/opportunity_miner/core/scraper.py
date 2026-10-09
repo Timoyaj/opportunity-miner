@@ -34,10 +34,52 @@ def clean_scraped_text(raw_text: str) -> str:
 
 
 def fetch_url_clean(url: str, timeout: int = 8) -> str | None:
-    """Fetch clean markdown content for any public URL using Jina Reader (agent-reach zero-config scraping protocol)."""
+    """Fetch clean markdown content for any public URL.
+
+    FREE OSS cascade (all zero-cost, self-hostable):
+      1. Trafilatura (MIT, pip: trafilatura) — best open-source article extractor
+      2. BeautifulSoup (MIT, pip: beautifulsoup4 + lxml) — fallback HTML parse
+      3. Jina Reader (free service, https://r.jina.ai/) — last-resort zero-config
+    """
     if not url or not url.startswith("http"):
         return None
 
+    # 1. Local Trafilatura (MIT) — no network to external AI service
+    try:
+        import trafilatura  # type: ignore
+
+        downloaded = trafilatura.fetch_url(url)
+        if downloaded:
+            extracted = trafilatura.extract(downloaded, include_comments=False, include_tables=True)
+            if extracted:
+                return clean_scraped_text(extracted)
+    except Exception as e:
+        logger.debug(f"Trafilatura fetch failed for {url}: {e}")
+
+    # 2. Direct requests + BeautifulSoup (MIT)
+    try:
+        try:
+            from bs4 import BeautifulSoup  # type: ignore
+
+            headers = {"User-Agent": "OpportunityMiner-Research/0.2.0 (Commercial problem discovery)"}
+            resp = requests.get(url, headers=headers, timeout=timeout)
+            if resp.status_code == 200 and resp.text:
+                soup = BeautifulSoup(resp.text, "lxml")
+                # Remove noise
+                for tag in soup(["script", "style", "nav", "footer", "header"]):
+                    tag.decompose()
+                text = soup.get_text(separator=" ", strip=True)
+                cleaned = clean_scraped_text(text)
+                if cleaned and len(cleaned) > 80:
+                    return cleaned
+        except ImportError:
+            pass
+        except Exception as e:
+            logger.debug(f"BeautifulSoup fetch failed for {url}: {e}")
+    except Exception:
+        pass
+
+    # 3. Jina Reader fallback (free, no key)
     try:
         jina_url = f"https://r.jina.ai/{url}"
         headers = {

@@ -60,27 +60,72 @@ class ProblemExtractionResult(BaseModel):
 
 
 class ProblemExtractor:
-    """Extracts structured commercial problems using LLM or rule-based heuristics."""
+    """Extracts structured commercial problems using LLM or rule-based heuristics.
+
+    FREE OSS path: Ollama (MIT, http://localhost:11434) is tried after Gemini/OpenAI
+    and before heuristic fallback. No API key, runs 100% locally.
+    Env: OLLAMA_HOST (default http://localhost:11434), OLLAMA_MODEL (default mistral)
+         USE_OLLAMA=1 to force, or set OLLAMA_HOST explicitly.
+    """
 
     def __init__(self):
         self.gemini_api_key = os.environ.get("GEMINI_API_KEY")
         self.openai_api_key = os.environ.get("OPENAI_API_KEY")
+        self.ollama_host = os.environ.get("OLLAMA_HOST") or "http://localhost:11434"
+        self.ollama_model = os.environ.get("OLLAMA_MODEL") or "mistral"
+        # Check if Ollama should be attempted (env set or local service reachable)
+        self._use_ollama = bool(
+            os.environ.get("OLLAMA_HOST")
+            or os.environ.get("OLLAMA_MODEL")
+            or os.environ.get("USE_OLLAMA")
+        )
+        # Auto-detect local Ollama if no paid keys (best-effort, 0.5s timeout, cached)
+        self._ollama_detected: bool | None = None
+
+    def _is_ollama_available(self) -> bool:
+        if self._ollama_detected is not None:
+            return self._ollama_detected
+        # If user explicitly configured Ollama, assume true (try once)
+        if self._use_ollama:
+            self._ollama_detected = True
+            return True
+        # Otherwise quick probe of local Ollama (only if no paid keys, to avoid latency)
+        if self.gemini_api_key or self.openai_api_key:
+            self._ollama_detected = False
+            return False
+        try:
+            import requests  # local import to avoid hard dep
+            resp = requests.get(f"{self.ollama_host.rstrip('/')}/api/tags", timeout=1)
+            self._ollama_detected = resp.status_code == 200
+            if self._ollama_detected:
+                logger.info(f"Ollama detected at {self.ollama_host} (model: {self.ollama_model}) — will use free local LLM")
+            return self._ollama_detected
+        except Exception:
+            self._ollama_detected = False
+            return False
 
     def extract(self, title: str, body: str, source: str) -> ProblemExtractionResult | None:
         """Extract structured problem from text."""
-        # Check if LLM API is available
+        # Check if LLM API is available (paid)
         if self.gemini_api_key:
             try:
                 return self._extract_gemini(title, body, source)
             except Exception as e:
-                logger.warning(f"Gemini API extraction failed, using heuristic fallback: {e}")
+                logger.warning(f"Gemini API extraction failed, using fallback: {e}")
         elif self.openai_api_key:
             try:
                 return self._extract_openai(title, body, source)
             except Exception as e:
-                logger.warning(f"OpenAI API extraction failed, using heuristic fallback: {e}")
+                logger.warning(f"OpenAI API extraction failed, using fallback: {e}")
 
-        # Reliable, fast heuristic extractor
+        # FREE OSS local LLM via Ollama (MIT, localhost:11434, no key)
+        if self._is_ollama_available():
+            try:
+                return self._extract_ollama(title, body, source)
+            except Exception as e:
+                logger.warning(f"Ollama extraction failed, using heuristic fallback: {e}")
+
+        # Reliable, fast heuristic extractor (zero-deps, always works offline)
         return self._extract_heuristic(title, body, source)
 
     def _extract_heuristic(self, title: str, body: str, source: str) -> ProblemExtractionResult:
@@ -233,3 +278,52 @@ class ProblemExtractor:
             parsed = json.loads(text)
             return ProblemExtractionResult(**parsed)
         raise RuntimeError(f"OpenAI API returned {resp.status_code}")
+
+    def _extract_ollama(self, title: str, body: str, source: str) -> ProblemExtractionResult:
+        """FREE OSS local extraction via Ollama (MIT, http://localhost:11434, no key).
+
+        Uses Ollama's /api/generate endpoint (also supports /v1/chat/completions compat).
+        Model: mistral (default), phi4, llama3.2, qwen3 — all Apache/MIT, local.
+        """
+        import requests
+
+        host = self.ollama_host.rstrip("/")
+        model = self.ollama_model
+
+        schema_hint = (
+            "Return STRICT JSON matching: is_commercial_problem (bool), problem_statement (string), "
+            "underlying_problem (string), target_customer (string), current_workaround (string|null), "
+            "frustration_severity ('none'|'mild'|'severe'|'blocking'), reports_financial_loss (bool), "
+            "reported_hours_lost_per_week (float), frequency_cadence ('unknown'|'yearly'|'monthly'|'weekly'|'daily'|'continuous'), "
+            "explicit_budget_stated (float|null), currently_paying_for_workaround (bool), actively_seeking_help (bool), "
+            "pain_quotes (string[] exact quotes), payment_quotes (string[] exact quotes), confidence_rating (0.0-1.0)."
+        )
+        prompt = (
+            f"You are an expert commercial opportunity analyst. Analyze this post and extract the commercial problem as strict JSON.\n\n"
+            f"Title: {title}\nBody: {body}\nSource: {source}\n\n{schema_hint}\n\nJSON:"
+        )
+
+        payload = {
+            "model": model,
+            "prompt": prompt,
+            "stream": False,
+            "format": "json",
+            "options": {"temperature": 0.1, "num_predict": 800},
+        }
+        try:
+            resp = requests.post(f"{host}/api/generate", json=payload, timeout=20)
+            if resp.status_code == 200:
+                data = resp.json()
+                text = (data.get("response") or "").strip()
+                if text.startswith("```"):
+                    text = re.sub(r"^```(?:json)?\s*", "", text)
+                    text = re.sub(r"\s*```$", "", text)
+                parsed = json.loads(text)
+                return ProblemExtractionResult(**parsed)
+            if resp.status_code == 404:
+                raise RuntimeError(f"Ollama model '{model}' not found — run `ollama pull {model}`")
+            raise RuntimeError(f"Ollama /api/generate returned {resp.status_code}: {resp.text[:300]}")
+        except json.JSONDecodeError as je:
+            raise RuntimeError(f"Ollama returned invalid JSON: {je} — raw: {text[:500] if 'text' in locals() else ''}")
+        except requests.exceptions.ConnectionError:
+            raise RuntimeError(f"Ollama not reachable at {host} — is `ollama serve` running?")

@@ -7,3 +7,9 @@ click>=8.1.0
 streamlit>=1.28.0
 numpy>=1.24.0
 pytest>=7.4.0
+# --- 100% FREE OSS (optional, graceful fallback if not installed) ---
+beautifulsoup4>=4.12.0  # MIT
+lxml>=4.9.0              # BSD-like
+httpx>=0.24.0            # BSD
+# For full free stack: pip install -e ".[free]"  (sentence-transformers MIT, chromadb Apache, etc.)
+# See pyproject.toml [project.optional-dependencies] for grouped free deps
