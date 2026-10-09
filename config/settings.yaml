@@ -1,4 +1,4 @@
-# OpportunityMiner General Settings
+# OpportunityMiner General Settings — 100% FREE & OPEN-SOURCE defaults
 
 database:
   url: "sqlite:///data/opportunity_miner.db"
@@ -13,6 +13,58 @@ clustering:
 negative_filter:
   similarity_threshold: 0.85
   blacklist_path: "data/vectors/negative_blacklist.json"
+  # Free OSS vector backends (auto-detect):
+  #   hash = zero-deps fallback (384d)
+  #   sentence_transformers (Apache-2.0) -> pip install sentence-transformers
+  #   fastembed (MIT, ONNX) -> pip install fastembed
+  # Optional Chroma (Apache-2.0) or Qdrant (Apache-2.0) persistence:
+  #   CHROMA_PATH=data/vectors/chroma  or  QDRANT_PATH=data/vectors/qdrant
+  # See core/vector_store.py for VECTOR_MODEL / VECTOR_BACKEND env
+
+# Free local embeddings (no OpenAI key)
+embeddings:
+  # Default 384d — drop-in for existing DB; upgrade to 1024d via BAAI/bge-m3 (MIT) or Qwen3 (Apache)
+  model: "sentence-transformers/all-MiniLM-L6-v2"  # Apache-2.0, 80MB, 384d
+  # Alternatives (free):
+  #   BAAI/bge-m3               (MIT, 1024d, 8K ctx, hybrid)
+  #   BAAI/bge-small-en-v1.5    (MIT, 384d)
+  #   Qwen/Qwen3-Embedding-0.6B (Apache-2.0, 32K ctx)
+  backend: "auto"  # auto | sentence_transformers | fastembed | hash
+  chroma_path: "data/vectors/chroma"   # optional Chroma (Apache-2.0)
+  qdrant_path: ""  # e.g., "data/vectors/qdrant" for Qdrant (Apache-2.0)
+
+# Free local LLM extraction (Ollama MIT, localhost:11434)
+llm:
+  provider: "auto"  # auto | ollama | heuristic
+  ollama_host: "http://localhost:11434"
+  ollama_model: "mistral"  # mistral | phi4 | llama3.2 | qwen3
+  # Run: ollama pull mistral && ollama serve
+
+# Free OSS SERP enricher (replaces SerpApi $25/mo)
+serp:
+  provider: "auto"  # auto | openserp (MIT) | searxng (AGPL) | duckduckgo (MIT)
+  openserp_url: "http://localhost:7000"  # docker run -p 7000:7000 karust/openserp serve
+  searxng_url: "http://localhost:8080"   # docker run -p 8080:8080 searxng/searxng
+  # DuckDuckGo fallback: pip install duckduckgo-search (MIT) — no server needed
+
+# Free OSS notifications (Apprise MIT + ntfy Apache-2.0)
+notifications:
+  apprise_urls: ""  # e.g., "tgram://token/chat_id,discord://webhook"
+  ntfy_topic: ""    # e.g., "https://ntfy.sh/opportunityminer" or "http://localhost/mytopic"
+  slack_webhook_url: ""
+  discord_webhook_url: ""
+  gotify_url: ""
+  gotify_token: ""
+
+# Free OSS CRM sync (Baserow MIT / NocoDB / Grist Apache)
+crm:
+  provider: "auto"  # auto | baserow (MIT) | nocodb | csv
+  baserow_url: "http://localhost:3000"  # docker run -p 3000:3000 baserow/baserow
+  baserow_token: ""
+  baserow_table_id: ""
+  nocodb_url: ""
+  nocodb_token: ""
+  fallback_csv: "data/crm_export.csv"
 
 reports:
   output_dir: "reports"

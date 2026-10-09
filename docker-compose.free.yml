@@ -1,0 +1,114 @@
+# 100% FREE & OPEN-SOURCE stack for OpportunityMiner
+# All images are Apache-2.0 / MIT / AGPL and self-hostable forever.
+# Usage:
+#   docker compose -f docker-compose.free.yml up -d          # start all free services
+#   OLLAMA_HOST=http://localhost:11434 USE_OLLAMA=1 python -m opportunity_miner.cli scan --sources github,stackoverflow,devto,appstore --limit 30
+#   SEARXNG_URL=http://localhost:8080 python -m opportunity_miner.cli scan  # for SERP enrichment
+
+services:
+  # ── Vector DB: Chroma (Apache-2.0, embedded) or Qdrant (Apache-2.0, Rust) ──
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: oppminer-qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - ./data/vectors/qdrant:/qdrant/storage
+    restart: unless-stopped
+    profiles: ["vectors", "all"]
+
+  # Chroma is also usable embedded via `pip install chromadb` — no server required.
+  # Uncomment if you prefer Chroma server over embedded:
+  # chroma:
+  #   image: chromadb/chroma:latest
+  #   ports: ["8000:8000"]
+  #   volumes: ["./data/vectors/chroma:/chroma"]
+  #   profiles: ["vectors", "all"]
+
+  # ── SERP: OpenSERP (MIT) — structured JSON, 6 engines ───────────────────
+  openserp:
+    image: karust/openserp:latest
+    container_name: oppminer-openserp
+    command: serve -a 0.0.0.0 -p 7000
+    ports:
+      - "7000:7000"
+    restart: unless-stopped
+    profiles: ["serp", "all"]
+
+  # SearXNG (AGPL) — 70+ engines, private metasearch
+  searxng:
+    image: searxng/searxng:latest
+    container_name: oppminer-searxng
+    ports:
+      - "8080:8080"
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8080/
+    volumes:
+      - ./data/searxng:/etc/searxng
+    restart: unless-stopped
+    profiles: ["serp", "all"]
+
+  # ── LLM: Ollama (MIT) — local inference, OpenAI-compatible ───────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: oppminer-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./data/ollama:/root/.ollama
+    # GPU passthrough if available (NVIDIA):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
+    restart: unless-stopped
+    profiles: ["llm", "all"]
+    # After first start, pull model once:
+    # docker exec oppminer-ollama ollama pull mistral
+
+  # ── CRM: Baserow (MIT) — self-hosted Airtable alternative ─────────────────
+  baserow:
+    image: baserow/baserow:latest
+    container_name: oppminer-baserow
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data/baserow:/baserow/data
+    restart: unless-stopped
+    profiles: ["crm", "all"]
+
+  # Alternative: NocoDB (AGPL) — `docker run -p 8080:8080 nocodb/nocodb`
+  # nocodb:
+  #   image: nocodb/nocodb:latest
+  #   ports: ["8080:8080"]
+  #   profiles: ["crm", "all"]
+
+  # ── Automation: Activepieces (MIT) — open Zapier ─────────────────────────
+  activepieces:
+    image: activepieces/activepieces:latest
+    container_name: oppminer-activepieces
+    ports:
+      - "4200:80"
+    volumes:
+      - ./data/activepieces:/root/.activepieces
+    restart: unless-stopped
+    profiles: ["automation", "all"]
+
+  # ── Notifications: ntfy (Apache-2.0) — self-hosted push ──────────────────
+  ntfy:
+    image: binwiederhier/ntfy:latest
+    container_name: oppminer-ntfy
+    command: serve
+    ports:
+      - "2586:80"
+    volumes:
+      - ./data/ntfy:/var/cache/ntfy
+    restart: unless-stopped
+    profiles: ["notify", "all"]
+
+volumes:
+  qdrant_storage:
+  searxng_data:
+  ollama_data:
+  baserow_data:
+  ntfy_cache:

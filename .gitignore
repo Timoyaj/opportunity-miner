@@ -47,3 +47,10 @@ data/vectors/*.bin
 .vscode/
 *.swp
 *.swo
+# Free CRM fallback
+data/crm_export.csv
+data/baserow/
+data/ollama/
+data/qdrant/
+data/searxng/
+data/chroma/

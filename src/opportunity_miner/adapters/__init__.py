@@ -6,6 +6,10 @@ from .reddit_adapter import RedditAdapter
 from .upwork_adapter import UpworkAdapter
 from .indiehackers_adapter import IndieHackersAdapter
 from .producthunt_adapter import ProductHuntAdapter
+from .github_adapter import GithubAdapter
+from .stackoverflow_adapter import StackOverflowAdapter
+from .devto_adapter import DevToAdapter
+from .appstore_adapter import AppStoreAdapter
 
 ADAPTERS_MAP = {
     "hackernews": HackerNewsAdapter,
@@ -13,6 +17,10 @@ ADAPTERS_MAP = {
     "upwork": UpworkAdapter,
     "indiehackers": IndieHackersAdapter,
     "producthunt": ProductHuntAdapter,
+    "github": GithubAdapter,
+    "stackoverflow": StackOverflowAdapter,
+    "devto": DevToAdapter,
+    "appstore": AppStoreAdapter,
 }
 
 
@@ -32,6 +40,10 @@ __all__ = [
     "UpworkAdapter",
     "IndieHackersAdapter",
     "ProductHuntAdapter",
+    "GithubAdapter",
+    "StackOverflowAdapter",
+    "DevToAdapter",
+    "AppStoreAdapter",
     "get_adapter",
     "ADAPTERS_MAP",
 ]
